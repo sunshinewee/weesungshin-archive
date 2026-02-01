@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The weesungshin Archive</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #050505; /* 더 깊은 블랙으로 가독성 극대화 */
+            --text-silver: #ffffff; /* 순백색으로 선명도 확보 */
+            --accent-dim: rgba(255, 255, 255, 0.4);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-user-select: none; user-select: none; }
+        body { background-color: var(--bg-color); color: var(--text-silver); font-family: 'Playfair Display', serif; overflow-x: hidden; }
+
+        /* 1. 강화된 보안 게이트 */
+        #gate { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100vh; 
+            background: var(--bg-color); z-index: 9999; 
+            display: flex; flex-direction: column; align-items: center; justify-content: center; 
+        }
+
+        /* 버튼 가독성 및 클릭 유도 디자인 */
+        .enter-btn {
+            font-family: 'Cinzel', serif; font-size: 1.2rem; letter-spacing: 10px;
+            color: var(--text-silver); border: 1.5px solid var(--text-silver);
+            padding: 25px 80px; cursor: pointer; background: transparent;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative; overflow: hidden;
+        }
+        .enter-btn:hover {
+            background: var(--text-silver); color: var(--bg-color);
+            letter-spacing: 14px; box-shadow: 0 0 40px rgba(255, 255, 255, 0.2);
+        }
+        .click-hint {
+            margin-top: 20px; font-size: 0.7rem; letter-spacing: 4px; color: var(--accent-dim);
+            animation: pulse 2s infinite;
+        }
+
+        /* 2. 메인 컨텐츠 레이아웃 */
+        #archive-content { display: none; opacity: 0; transition: opacity 2s ease; z-index: 2; position: relative; }
+        header { height: 60vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+        h1 { font-family: 'Cinzel', serif; font-size: clamp(2.5rem, 8vw, 4.5rem); letter-spacing: 12px; margin-bottom: 1rem; }
+
+        /* 3. 갤러리 그리드 및 캔버스 */
+        .gallery-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 10rem; padding: 0 10vw 20vh; }
+        .canvas-container { position: relative; perspective: 2000px; display: flex; flex-direction: column; }
+        .canvas-wrap {
+            position: relative; width: 100%; aspect-ratio: 4/5; transform-style: preserve-3d;
+            box-shadow: 50px 50px 100px rgba(0,0,0,0.9); border-left: 20px solid #000; border-bottom: 6px solid #050505;
+        }
+        .canvas-image-layer { width: 100%; height: 100%; position: relative; overflow: hidden; background-color: #111; }
+        .main-img { width: 100%; height: 100%; object-fit: cover; transition: filter 0.3s; }
+        
+        /* 매트 질감 레이어 */
+        .canvas-texture-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;
+            background-image: url('https://www.transparenttextures.com/patterns/canvas-orange.png');
+            mix-blend-mode: multiply; opacity: 0.4;
+        }
+
+        /* Curated By 투명 압인 */
+        .curated-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.5); display: flex; align-items: center; justify-content: center;
+            opacity: 0; transition: opacity 1s; backdrop-filter: grayscale(0.6);
+        }
+        .is-sold .curated-overlay { opacity: 1; }
+        .pressed-seal {
+            font-family: 'Cinzel', serif; font-size: 1.4rem; letter-spacing: 8px; color: rgba(255, 255, 255, 0.1);
+            text-shadow: -1px -1px 1px rgba(255,255,255,0.2), 1px 1px 1px rgba(0,0,0,0.8); text-align: center;
+        }
+
+        /* 고객용 인터랙티브 컨트롤 패널 */
+        .control-panel { margin-top: 2.5rem; padding: 25px; background: rgba(20, 20, 25, 0.6); border: 1px solid #1a1a1c; }
+        .control-panel label { font-size: 0.7rem; letter-spacing: 3px; color: #666; display: flex; justify-content: space-between; margin-bottom: 10px; }
+        .control-panel input[type=range] { width: 100%; appearance: none; background: #222; height: 1px; cursor: pointer; }
+
+        @keyframes pulse { 0% { opacity: 0.3; } 50% { opacity: 0.8; } 100% { opacity: 0.3; } }
+        .spotlight { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; background: radial-gradient(circle 600px at var(--x, 50%) var(--y, 50%), rgba(255,255,255,0.03), transparent 85%); }
+    </style>
+</head>
+<body>
+    <div class="spotlight" id="spotlight"></div>
+
+    <div id="gate">
+        <button class="enter-btn" id="enter-btn">UNLOCK THE SILENCE</button>
+        <p class="click-hint">CLICK TO ENTER THE ARCHIVE</p>
+        <p id="denied-msg" style="display:none; color: #444; letter-spacing: 5px; font-size: 0.7rem; margin-top: 3rem;">INVITATION REQUIRED</p>
+    </div>
+
+    <div id="archive-content">
+        <header>
+            <h1>The weesungshin Archive</h1>
+            <p style="color: #666; letter-spacing: 4px; font-size: 0.9rem;">"200번의 리터칭, 기술에 깃든 인간의 온기"</p>
+        </header>
+        <main class="gallery-grid" id="main-gallery"></main>
+        <footer style="padding: 10vh; text-align: center; border-top: 1px solid #111;">
+            <p style="font-family: 'Cinzel'; font-size: 0.8rem; color: #333; letter-spacing: 5px;">&copy; 2026 WEESUNGSHIN ARCHIVE. 1-of-1 EDITION POLICY.</p>
+        </footer>
+    </div>
+
+    <script>
+        const artworks = [
+            { id: 1, title: "Deep Thought #01", img: "https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?q=80&w=1200", isSold: true, collector: "O.S.H", defaultTemp: 3200, defaultIntensity: 0.4 },
+            { id: 2, title: "Celestial Horizon", img: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1200", isSold: false, collector: "", defaultTemp: 5500, defaultIntensity: 0.25 }
+        ];
+
+        window.onload = () => {
+            const params = new URLSearchParams(window.location.search);
+            const btn = document.getElementById('enter-btn');
+            if(params.get('access') === 'exclusive') {
+                btn.onclick = () => {
+                    document.getElementById('gate').style.opacity = '0';
+                    setTimeout(() => {
+                        document.getElementById('gate').style.display = 'none';
+                        document.getElementById('archive-content').style.display = 'block';
+                        setTimeout(() => { document.getElementById('archive-content').style.opacity = '1'; }, 100);
+                    }, 1200);
+                    renderGallery();
+                };
+            } else {
+                btn.style.display = 'none'; document.querySelector('.click-hint').style.display = 'none';
+                document.getElementById('denied-msg').style.display = 'block';
+            }
+        };
+
+        function renderGallery() {
+            const container = document.getElementById('main-gallery');
+            artworks.forEach(art => {
+                const el = document.createElement('div');
+                el.className = `canvas-container ${art.isSold ? 'is-sold' : ''}`;
+                el.innerHTML = `
+                    <div class="canvas-wrap">
+                        <div class="canvas-image-layer">
+                            <img src="${art.img}" id="img-${art.id}" class="main-img" style="filter: sepia(${(6500-art.defaultTemp)/5000})">
+                            <div class="canvas-texture-layer" id="tex-${art.id}" style="opacity: ${art.defaultIntensity}"></div>
+                            <div class="curated-overlay"><div class="pressed-seal">CURATED BY<br>${art.collector || 'PRIVATE'}</div></div>
+                        </div>
+                    </div>
+                    <div class="control-panel">
+                        <label>Light Temperature <span id="label-temp-${art.id}">${art.defaultTemp}K</span></label>
+                        <input type="range" min="2000" max="8500" value="${art.defaultTemp}" oninput="adjustArt(${art.id}, 'temp', this.value)">
+                        <label>Texture Depth <span id="label-int-${art.id}">${Math.round(art.defaultIntensity*100)}%</span></label>
+                        <input type="range" min="0" max="100" value="${art.defaultIntensity*100}" oninput="adjustArt(${art.id}, 'int', this.value/100)">
+                    </div>
+                    <div class="artwork-meta"><h3>${art.title}</h3><p>${art.isSold ? `Held in Private Salon (${art.collector})` : `Available (Single Edition)`}</p></div>
+                `;
+                container.appendChild(el);
+            });
+        }
+
+        function adjustArt(id, type, val) {
+            if(type === 'temp') {
+                document.getElementById(`img-${id}`).style.filter = `sepia(${(6500-val)/5000}) brightness(0.95)`;
+                document.getElementById(`label-temp-${id}`).innerText = val + 'K';
+            } else if(type === 'int') {
+                document.getElementById(`tex-${id}`).style.opacity = val;
+                document.getElementById(`label-int-${id}`).innerText = Math.round(val*100) + '%';
+            }
+        }
+
+        const spotlight = document.getElementById('spotlight');
+        document.addEventListener('mousemove', e => {
+            spotlight.style.setProperty('--x', e.clientX + 'px');
+            spotlight.style.setProperty('--y', e.clientY + 'px');
+        });
+        document.addEventListener('contextmenu', e => e.preventDefault());
+    </script>
+</body>
+</html>
